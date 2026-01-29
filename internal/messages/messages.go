@@ -16,15 +16,11 @@ const (
 	JOB      Type = "JOB"
 	RESULT   Type = "RESULT"
 
-	// Later (not used yet):
-	// PING Type = "PING"
-	// PONG Type = "PONG"
 )
 
 type RegisterMsg struct {
 	Type    Type   `json:"type"`
 	Worker  string `json:"worker"`
-	Version string `json:"version"`
 }
 
 type AckMsg struct {
@@ -51,7 +47,6 @@ type ResultMsg struct {
 }
 
 // --- Simple NDJSON helpers (one JSON object per line) ---
-
 func Send(conn net.Conn, v any) error {
 	b, err := json.Marshal(v)
 	if err != nil {

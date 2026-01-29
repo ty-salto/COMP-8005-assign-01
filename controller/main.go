@@ -2,20 +2,15 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"time"
 
+	"assign1/internal/constants"
 	"assign1/internal/messages"
+	"assign1/internal/waiting"
 )
-
-const PasswordLen = 3
-
-// Put your exact required 79-char charset here.
-const LegalCharset79 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./0123456789:;<=>?@[\\]^_`{|}~"
 
 func main() {
 	startTotal := time.Now()
@@ -53,6 +48,9 @@ func main() {
 		usage(fmt.Errorf("accept failed: %w", err))
 		os.Exit(2)
 	}
+	fmt.Println("[controller] worker connected")
+
+	defer fmt.Println("[controller] Closing Connection")
 	defer conn.Close()
 
 	r := bufio.NewReader(conn)
@@ -71,18 +69,13 @@ func main() {
 	_ = messages.Send(conn, messages.AckMsg{Type: messages.ACK, Status: "OK"})
 
 	// Send JOB
-	if LegalCharset79 == "TODO_REPLACE_WITH_EXACT_79_CHARSET" {
-		usage(fmt.Errorf("set LegalCharset79 in controller/main.go and internal/messages/messages.go (job charset must match)"))
-		os.Exit(2)
-	}
-
 	job := messages.JobMsg{
 		Type:        messages.JOB,
 		Username:    username,
 		FullHash:    fullHash,
 		Alg:         alg,
-		Charset:     LegalCharset79,
-		PasswordLen: PasswordLen,
+		Charset:     constants.LegalCharset79,
+		PasswordLen: constants.PasswordLen,
 	}
 
 	startDispatch := time.Now()
@@ -93,12 +86,18 @@ func main() {
 	dispatchDur := time.Since(startDispatch)
 
 	// Wait RESULT
+	done := make(chan struct{}) 
+	waiting.StartDots(done, "[controller] waiting result")
+	
 	startReturn := time.Now()
 	var res messages.ResultMsg
 	if err := messages.RecvLine(r, &res); err != nil {
 		usage(fmt.Errorf("read RESULT failed: %w", err))
 		os.Exit(2)
 	}
+
+	close(done)
+	fmt.Println("\n[controller] Recieved result")
 	returnDur := time.Since(startReturn)
 
 	if res.Type != messages.RESULT {
@@ -122,54 +121,6 @@ func main() {
 	fmt.Printf("worker_compute_ms: %.3f\n", float64(res.WorkerComputeNs)/1e6)
 	fmt.Printf("result_return_ms: %.3f\n", float64(returnDur.Microseconds())/1000.0)
 	fmt.Printf("total_end_to_end_ms: %.3f\n", float64(time.Since(startTotal).Microseconds())/1000.0)
-}
-
-func parseArgs() (shadowPath, username string, port int, err error) {
-	flag.StringVar(&shadowPath, "f", "", "path to shadow file")
-	flag.StringVar(&username, "u", "", "username")
-	flag.IntVar(&port, "p", 0, "port")
-	flag.Parse()
-
-	if shadowPath == "" || username == "" || port <= 0 || port > 65535 {
-		return "", "", 0, fmt.Errorf("missing required argument")
-	}
-	return shadowPath, username, port, nil
-}
-
-func loadShadowHash(path, username string) (string, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("cannot open shadow file: %w", err)
-	}
-	lines := strings.Split(string(b), "\n")
-	prefix := username + ":"
-	for _, line := range lines {
-		if strings.HasPrefix(line, prefix) {
-			parts := strings.Split(line, ":")
-			if len(parts) < 2 || parts[1] == "" {
-				return "", fmt.Errorf("malformed or unsupported hash entry")
-			}
-			return parts[1], nil
-		}
-	}
-	return "", fmt.Errorf("username not in shadow file")
-}
-
-func detectAlg(fullHash string) (string, error) {
-	switch {
-	case strings.HasPrefix(fullHash, "$1$"):
-		return "md5", nil
-	case strings.HasPrefix(fullHash, "$5$"):
-		return "sha256", nil
-	case strings.HasPrefix(fullHash, "$6$"):
-		return "sha512", nil
-	case strings.HasPrefix(fullHash, "$2a$") || strings.HasPrefix(fullHash, "$2b$") || strings.HasPrefix(fullHash, "$2y$"):
-		return "bcrypt", nil
-	case strings.HasPrefix(fullHash, "$y$") || strings.HasPrefix(fullHash, "$7$"):
-		return "yescrypt", nil
-	default:
-		return "", fmt.Errorf("malformed or unsupported hash entry")
-	}
 }
 
 func usage(err error) {
