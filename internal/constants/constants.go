@@ -1,4 +1,4 @@
 package constants
 
-const PasswordLen = 3
-const LegalCharset79 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./0123456789:;<=>?@[\\]^_`{|}~"
+const MaxPasswordLen = 3
+const LegalCharset79 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#%^&*()_+-=.,:;?"

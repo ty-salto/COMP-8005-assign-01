@@ -16,7 +16,6 @@ import (
 
 func cryptHash(candidate, fullHash string) (string, error) {
 	// For modern hashes, the "salt" parameter is actually the full hash prefix
-	// (e.g., "$6$salt$...") which includes algorithm + salt + params.
 	cCand := C.CString(candidate)
 	cSalt := C.CString(fullHash)
 	defer C.free(unsafe.Pointer(cCand))

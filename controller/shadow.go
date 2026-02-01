@@ -25,7 +25,8 @@ func loadShadowHash(path, username string) (string, error) {
 	return "", fmt.Errorf("username not in shadow file")
 }
 
-func detectAlg(fullHash string) (string, error) {
+
+func validateHash(fullHash string) (string, error) {
 	switch {
 	case strings.HasPrefix(fullHash, "$1$"):
 		return "md5", nil

@@ -19,6 +19,7 @@ func main() {
 	}
 
 
+	//connect_to_controller
 	fmt.Println("[worker] Connecting...")
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
@@ -30,20 +31,19 @@ func main() {
 
 	r := bufio.NewReader(conn)
 
-	// REGISTER
+	// register_worker
 	reg := messages.RegisterMsg{
 		Type:    messages.REGISTER,
 		Worker:  hostnameOr("worker"),
 	}
-
 
 	fmt.Println("[worker] Registering...")
 	if err := messages.Send(conn, reg); err != nil {
 		usage(fmt.Errorf("send REGISTER failed: %w", err))
 		os.Exit(2)
 	}
-	fmt.Println("[worker] Closing Listener")
 
+	//receive_job
 	var ack messages.AckMsg
 	if err := messages.RecvLine(r, &ack); err != nil {
 		usage(fmt.Errorf("read ACK failed: %w", err))
@@ -58,7 +58,7 @@ func main() {
 
 	// Heartbeat later (around here)
 
-	// JOB
+	// validate_job
 	fmt.Println("[worker] Receiving Job...")
 	var job messages.JobMsg
 	if err := messages.RecvLine(r, &job); err != nil {
@@ -76,7 +76,7 @@ func main() {
 	}
 	fmt.Println("[worker] Received Job")
 
-	// CRACK (single-threaded)
+	// Crack (single-threaded)
 	fmt.Println("[worker] Cracking password")
 	done := make(chan struct{}) 
 	waiting.StartDots(done, "[worker] cracking")
@@ -85,7 +85,7 @@ func main() {
 	res := crack(&job)
 	res.WorkerComputeNs = time.Since(startCompute).Nanoseconds()
 
-	// RESULT (exactly one final result)
+	// send_result
 	fmt.Println("\n[worker] Sending result...")
 	if err := messages.Send(conn, res); err != nil {
 		close(done)

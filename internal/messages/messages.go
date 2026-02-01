@@ -35,7 +35,6 @@ type JobMsg struct {
 	FullHash    string `json:"full_hash"`
 	Alg         string `json:"alg"`          // "yescrypt"|"bcrypt"|"sha256"|"sha512"|"md5"
 	Charset     string `json:"charset"`      // must match required 79-char set
-	PasswordLen int    `json:"password_len"` // must be 3
 }
 
 type ResultMsg struct {

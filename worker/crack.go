@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"assign1/internal/constants"
 	"assign1/internal/messages"
 
 	"golang.org/x/crypto/bcrypt"
@@ -13,20 +14,23 @@ func crack(job *messages.JobMsg) *messages.ResultMsg {
 	// Deterministic sequential enumeration over full search space.
 	charset := job.Charset
 	base := len(charset)
-	space := 1
-	for i := 0; i < job.PasswordLen; i++ {
-		space *= base
-	}
 
-	for idx := 0; idx < space; idx++ {
-		cand := indexToCandidate(idx, charset, job.PasswordLen)
-
-		ok, err := verifyCandidate(job.Alg, cand, job.FullHash)
-		if err != nil {
-			return &messages.ResultMsg{Type: messages.RESULT, Status: "ERROR", Error: err.Error()}
+	for length :=1; length <= constants.MaxPasswordLen; length++ {
+		space := 1
+		for i := 0; i < length; i++ {
+			space *= base
 		}
-		if ok {
-			return &messages.ResultMsg{Type: messages.RESULT, Status: "FOUND", Password: cand}
+
+		for idx := 0; idx < space; idx++ {
+			cand := indexToCandidate(idx, charset, length)
+
+			ok, err := verifyCandidate(job.Alg, cand, job.FullHash)
+			if err != nil {
+				return &messages.ResultMsg{Type: messages.RESULT, Status: "ERROR", Error: err.Error()}
+			}
+			if ok {
+				return &messages.ResultMsg{Type: messages.RESULT, Status: "FOUND", Password: cand}
+			}
 		}
 	}
 	return &messages.ResultMsg{Type: messages.RESULT, Status: "NOT_FOUND"}

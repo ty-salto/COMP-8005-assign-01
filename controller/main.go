@@ -27,13 +27,14 @@ func main() {
 		usage(err)
 		os.Exit(2)
 	}
-	alg, err := detectAlg(fullHash)
+	alg, err := validateHash(fullHash)
 	if err != nil {
 		usage(err)
 		os.Exit(2)
 	}
 	parseDur := time.Since(startParse)
 
+	//start_listener
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		usage(fmt.Errorf("listen failed: %w", err))
@@ -43,6 +44,7 @@ func main() {
 
 	fmt.Printf("[controller] listening on :%d\n", port)
 
+	//accept_and_register_worker
 	conn, err := ln.Accept()
 	if err != nil {
 		usage(fmt.Errorf("accept failed: %w", err))
@@ -68,14 +70,13 @@ func main() {
 	}
 	_ = messages.Send(conn, messages.AckMsg{Type: messages.ACK, Status: "OK"})
 
-	// Send JOB
+	// build_job and send_job
 	job := messages.JobMsg{
 		Type:        messages.JOB,
 		Username:    username,
 		FullHash:    fullHash,
 		Alg:         alg,
 		Charset:     constants.LegalCharset79,
-		PasswordLen: constants.PasswordLen,
 	}
 
 	startDispatch := time.Now()
@@ -85,7 +86,7 @@ func main() {
 	}
 	dispatchDur := time.Since(startDispatch)
 
-	// Wait RESULT
+	// wait_for_result
 	done := make(chan struct{}) 
 	waiting.StartDots(done, "[controller] waiting result")
 	
@@ -105,7 +106,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	// Report
+	// report
 	fmt.Println("----- FINAL RESULT -----")
 	fmt.Printf("status: %s\n", res.Status)
 	if res.Status == "FOUND" {
@@ -123,6 +124,7 @@ func main() {
 	fmt.Printf("total_end_to_end_ms: %.3f\n", float64(time.Since(startTotal).Microseconds())/1000.0)
 }
 
+// display_usage
 func usage(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)

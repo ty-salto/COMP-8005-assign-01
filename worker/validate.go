@@ -8,9 +8,9 @@ import (
 )
 
 func validateJob(job *messages.JobMsg) error {
-	if job.PasswordLen != constants.PasswordLen {
-		return fmt.Errorf("invalid password length")
-	}
+	// if job.PasswordLen != constants.PasswordLen {
+	// 	return fmt.Errorf("invalid password length")
+	// }
 	if job.Charset != constants.LegalCharset79 {
 		return fmt.Errorf("invalid charset")
 	}
